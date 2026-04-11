@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./server
+    container_name: estoque-backend
+    ports:
+      - "3333:3333"
+    volumes:
+      - ./server/prisma:/app/prisma
+      - ./server/uploads:/app/uploads
+      - ./server/dev.db:/app/dev.db
+    environment:
+      - NODE_ENV=production
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    restart: always
+
+  frontend:
+    build: ./web
+    container_name: estoque-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: always

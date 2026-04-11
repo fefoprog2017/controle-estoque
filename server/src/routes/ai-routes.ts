@@ -1,0 +1,112 @@
+import { FastifyInstance } from 'fastify'
+import { z } from 'zod'
+import { GoogleGenerativeAI } from '@google/generative-ai'
+import { ZodTypeProvider } from 'fastify-type-provider-zod'
+import { prisma } from '../lib/prisma'
+import 'dotenv/config'
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
+
+const SYSTEM_PROMPT = `
+Você é um extrator de dados especializado em logística e notas fiscais de moda/varejo.
+OBJETIVO: Extrair produtos de arquivos PDF/Imagens e converter em JSON padronizado.
+
+REGRAS DE MAPEAMENTO:
+- SKU/Código: Identificar códigos alfanuméricos únicos do produto.
+- Descrição: Nome do item, ignorando códigos redundantes.
+- Atributos: Separar explicitamente Cor e Tamanho (P, M, G, GG, 36-54, etc).
+- Quantidade: Converter para número (float).
+- Preço: Valor unitário (float).
+
+REGRAS DE LIMPEZA:
+- IGNORE: Dados do emissor, dados do destinatário, logotipos, totais da nota, impostos (ICMS/IPI) e rodapés.
+- MAPEAMENTO SEMÂNTICO: Se a coluna for "Referência" ou "Cód", trate como "sku". Se for "Item" ou "Descrição", trate como "nome".
+
+FORMATO DE SAÍDA:
+Apenas um array JSON puro (sem markdown, sem explicações):
+[
+  { "sku": "ABC", "nome": "Camiseta", "cor": "Azul", "tam": "M", "qtd": 10, "sellingPrice": 29.90 }
+]
+`
+
+export async function aiRoutes(app: FastifyInstance) {
+  const appTyped = app.withTypeProvider<ZodTypeProvider>()
+
+  appTyped.post('/ai/extract-products', async (request, reply) => {
+    console.log('--- NOVA REQUISIÇÃO DE EXTRAÇÃO ---')
+    
+    if (!request.isMultipart()) {
+      console.error('ERRO: Requisição não é multipart')
+      return reply.status(400).send({ message: 'A requisição deve ser multipart/form-data' })
+    }
+
+    const parts = request.parts()
+    let fileBuffer: Buffer | null = null
+    let mimeType = ''
+    let filename = ''
+
+    try {
+      console.log('--- INICIANDO CONSUMO DE PARTS ---')
+      for await (const part of parts) {
+        console.log('Parte detectada:', part.fieldname, 'Tipo:', part.type)
+        if (part.type === 'file') {
+          console.log('Arquivo detectado:', part.filename, 'Mime:', part.mimetype)
+          fileBuffer = await part.toBuffer()
+          mimeType = part.mimetype
+          filename = part.filename
+        } else {
+          console.log('Campo detectado:', part.fieldname, 'Valor:', part.value)
+        }
+      }
+      console.log('--- FIM DO CONSUMO DE PARTS ---')
+    } catch (err: any) {
+      console.error('ERRO ao ler partes multipart:', err.message)
+      return reply.status(500).send({ message: 'Erro ao processar o stream do arquivo' })
+    }
+
+    if (!fileBuffer || fileBuffer.length === 0) {
+      console.error('ERRO: Nenhum arquivo encontrado ou buffer vazio')
+      return reply.status(400).send({ message: 'Arquivo não enviado ou está vazio' })
+    }
+
+    console.log('Arquivo carregado com sucesso:', filename, 'Mime:', mimeType, 'Tamanho:', fileBuffer.length)
+
+    try {
+      console.log('Iniciando extração com Gemini Flash Latest...')
+      const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' })
+
+      const result = await model.generateContent([
+        SYSTEM_PROMPT,
+        {
+          inlineData: {
+            data: fileBuffer.toString('base64'),
+            mimeType
+          }
+        }
+      ])
+
+      const response = result.response
+      let text = response.text()
+      
+      console.log('Resposta bruta da IA recebida.')
+      
+      // Limpeza robusta de Markdown e espaços
+      text = text.replace(/```json/g, '')
+                 .replace(/```/g, '')
+                 .trim()
+      
+      try {
+        const products = JSON.parse(text)
+        console.log(`Sucesso: ${products.length} produtos extraídos.`)
+        return { products }
+      } catch (e) {
+        console.error('ERRO DE PARSE JSON. Resposta da IA:', text)
+        return reply.status(500).send({ message: 'A IA gerou um formato inválido. Tente novamente.' })
+      }
+
+    } catch (error: any) {
+      console.error('ERRO NA API DO GEMINI:', error.message || error)
+      return reply.status(500).send({ message: `Erro na IA: ${error.message || 'Falha na comunicação'}` })
+    }
+  })
+}

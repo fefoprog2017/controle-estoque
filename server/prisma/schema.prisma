@@ -1,0 +1,135 @@
+// server/prisma/schema.prisma
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String     @id @default(uuid())
+  name      String
+  email     String     @unique
+  password  String
+  role      String     @default("USER")
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  movements Movement[]
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  products    Product[]
+}
+
+model Supplier {
+  id           String     @id @default(uuid())
+  companyName  String     
+  document     String     @unique 
+  contactName  String?
+  email        String?
+  phone        String?
+  address      String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  movements    Movement[] 
+}
+
+model Client {
+  id           String     @id @default(uuid())
+  name         String     
+  document     String?    @unique 
+  contactName  String?
+  email        String?
+  phone        String?
+  address      String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  movements    Movement[] 
+}
+
+model Product {
+  id              String   @id @default(uuid())
+  name            String
+  description     String?
+  sku             String   @unique
+  barcode         String?  @unique
+  unitOfMeasure   String   
+  
+  color           String?
+  size            String?
+
+  minStock        Float    @default(0)
+  maxStock        Float?
+
+  averageCost     Float    @default(0) 
+  sellingPrice    Float    @default(0) 
+
+  aisle           String?  
+  shelf           String?  
+  batch           String?  
+
+  currentStock    Float    @default(0)
+
+  categoryId      String
+  category        Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  movements       Movement[]
+}
+
+model Movement {
+  id              String        @id @default(uuid())
+  type            String        
+  date            DateTime      @default(now())
+  quantity        Float
+  unitValue       Float         
+  totalValue      Float         
+
+  productId       String
+  product         Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  invoiceNumber   String?       
+  supplierId      String?
+  supplier        Supplier?     @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  
+  clientId        String?
+  client          Client?       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  outwardReason   String?       
+
+  notes           String?
+
+  attachment      Attachment?   
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Attachment {
+  id            String    @id @default(uuid())
+  fileName      String    
+  originalName  String    
+  mimeType      String    
+  size          Int       
+  url           String    
+  
+  movementId    String    @unique
+  movement      Movement  @relation(fields: [movementId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime  @default(now())
+}

@@ -1,0 +1,24 @@
+# Dependências
+node_modules
+dist
+.env
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+server-log.txt
+
+# Banco de Dados
+*.db
+*.db-journal
+
+# IDEs
+.vscode
+.idea
+*.suo
+*.ntuser
+*.user
+
+# Docker
+docker-compose.override.yml
