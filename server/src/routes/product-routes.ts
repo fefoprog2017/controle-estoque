@@ -177,7 +177,7 @@ export async function productRoutes(app: FastifyInstance) {
         minStock: z.number(),
         maxStock: z.number().optional().nullable(),
         sellingPrice: z.number(),
-        averageCost: z.number().optional(), // Novo campo permitido para edição
+        averageCost: z.number().optional(),
         aisle: z.string().optional().nullable(),
         shelf: z.string().optional().nullable(),
         batch: z.string().optional().nullable(),
@@ -187,26 +187,68 @@ export async function productRoutes(app: FastifyInstance) {
     const { id } = request.params
     const data = request.body
 
+    // 1. Verificar se o produto existe
     const product = await prisma.product.findUnique({ where: { id } })
     if (!product) {
-      return reply.status(404).send({ message: 'Product not found' })
+      return reply.status(404).send({ message: 'Produto não encontrado.' })
     }
 
-    const updatedProduct = await prisma.product.update({
-      where: { id },
-      data: {
-        ...data,
-        // Garantir que nulos do frontend não quebrem o Prisma se o campo for String?
-        description: data.description || null,
-        barcode: data.barcode || null,
-        maxStock: data.maxStock || null,
-        aisle: data.aisle || null,
-        shelf: data.shelf || null,
-        batch: data.batch || null,
+    // 2. Tratar campos únicos (Trim e Nullify)
+    const sku = data.sku.trim()
+    const barcode = data.barcode?.trim() || null
+
+    // 3. Verificar se o SKU já existe em OUTRO produto
+    const existingSku = await prisma.product.findFirst({
+      where: { 
+        sku,
+        id: { not: id } // Ignorar o próprio produto que estamos editando
       }
     })
+    if (existingSku) {
+      return reply.status(400).send({ message: `O SKU "${sku}" já está em uso por outro produto.` })
+    }
 
-    return updatedProduct
+    // 4. Verificar se o Barcode já existe em OUTRO produto (se não for nulo)
+    if (barcode) {
+      const existingBarcode = await prisma.product.findFirst({
+        where: { 
+          barcode,
+          id: { not: id }
+        }
+      })
+      if (existingBarcode) {
+        return reply.status(400).send({ message: `O código de barras "${barcode}" já está em uso.` })
+      }
+    }
+
+    // 5. Atualizar de forma explícita
+    try {
+      const updatedProduct = await prisma.product.update({
+        where: { id },
+        data: {
+          name: data.name,
+          sku: sku,
+          barcode: barcode,
+          unitOfMeasure: data.unitOfMeasure,
+          minStock: data.minStock,
+          sellingPrice: data.sellingPrice,
+          averageCost: data.averageCost,
+          description: data.description || null,
+          maxStock: data.maxStock || null,
+          aisle: data.aisle || null,
+          shelf: data.shelf || null,
+          batch: data.batch || null,
+        }
+      })
+
+      return updatedProduct
+    } catch (error: any) {
+      console.error('Erro ao atualizar produto:', error)
+      return reply.status(500).send({ 
+        message: 'Erro interno ao salvar no banco de dados.',
+        error: error.message 
+      })
+    }
   })
 
   // 7. Excluir Produto
