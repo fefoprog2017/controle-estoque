@@ -23,7 +23,9 @@ Este arquivo registra o progresso das "Stories" (funcionalidades e tarefas) para
 - [x] **Story #5: Validação Final de UI**
   - Status: Validada interface com dados reais do Backend.
 - [x] **Story #12: Subir Base (Extração IA)**
-  - Implementado upload Drag & Drop, Integração Gemini AI para extração de produtos e Bulk Upsert.
+  - Status: 100% Funcional. Extração de PDF/Imagem via Gemini e Bulk Upsert no Banco.
+- [x] **Story #13: Cloud Deployment (Oracle Cloud + Docker)**
+  - Status: Sistema online via IP Público com Docker, Nginx Proxy e Persistência SQLite.
 - [x] **Story #1: Modelagem do Banco de Dados** (SQLite/Prisma)
 - [x] **Story #2: Core Backend** (CRUD Produtos, Movimentações, Upload NFe)
 - [x] **Story #3: Core Frontend** (Layout, Sidebar, Navigation)

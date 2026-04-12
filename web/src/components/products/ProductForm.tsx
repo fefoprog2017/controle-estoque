@@ -13,6 +13,7 @@ const productSchema = z.object({
   unitOfMeasure: z.string().min(1, 'Unidade é obrigatória'),
   minStock: z.coerce.number().min(0),
   sellingPrice: z.coerce.number().min(0),
+  averageCost: z.coerce.number().min(0), // Novo campo no schema
   description: z.string().optional(),
   aisle: z.string().optional(),
   shelf: z.string().optional(),
@@ -31,6 +32,7 @@ interface ProductFormProps {
     unitOfMeasure: string
     minStock: number
     sellingPrice: number
+    averageCost: number // Novo campo nas props
     description?: string | null
     aisle?: string | null
     shelf?: string | null
@@ -48,6 +50,7 @@ export function ProductForm({ onSuccess, product }: ProductFormProps) {
       unitOfMeasure: product?.unitOfMeasure || 'UN',
       minStock: product?.minStock || 0,
       sellingPrice: product?.sellingPrice || 0,
+      averageCost: product?.averageCost || 0, // Novo valor default
       description: product?.description || '',
       aisle: product?.aisle || '',
       shelf: product?.shelf || '',
@@ -121,10 +124,14 @@ export function ProductForm({ onSuccess, product }: ProductFormProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label htmlFor="sellingPrice">Preço de Venda (R$)</Label>
           <Input id="sellingPrice" type="number" step="0.01" {...register('sellingPrice')} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="averageCost">Custo Médio (R$)</Label>
+          <Input id="averageCost" type="number" step="0.01" {...register('averageCost')} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="minStock">Estoque Mínimo (Alerta)</Label>

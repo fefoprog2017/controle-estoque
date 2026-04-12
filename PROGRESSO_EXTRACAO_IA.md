@@ -1,7 +1,13 @@
 # Relatório de Progresso: Funcionalidade "Subir Base" (Extração IA)
 
-## Status Atual
-A funcionalidade está em fase de depuração final. Identificamos que as alterações no código não estavam sendo aplicadas porque o servidor backend ficou travado em um processo fantasma, impedindo o reinício na porta 3333 (`EADDRINUSE`).
+## Status Final (Concluído)
+A funcionalidade está 100% operacional e em produção.
+
+## Resoluções Aplicadas
+- **Backend**: Aumentado `bodyLimit` para 50MB no Fastify e configurado `@fastify/multipart` para processar streams pesados.
+- **Banco de Dados**: Implementado `upsert` robusto que aceita campos `cor` e `tamanho` nulos da IA.
+- **Deploy**: Containerização via Docker com todas as dependências do Puppeteer instaladas para geração de relatórios PDF.
+- **Rede**: Configurado Nginx como Proxy Reverso para permitir tráfego seguro na porta 80.
 
 ## Problema Original
 - Erro "Arquivo não enviado" ao tentar extrair dados de PDFs/Imagens.

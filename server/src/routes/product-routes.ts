@@ -170,16 +170,17 @@ export async function productRoutes(app: FastifyInstance) {
       }),
       body: z.object({
         name: z.string(),
-        description: z.string().optional(),
+        description: z.string().optional().nullable(),
         sku: z.string(),
-        barcode: z.string().optional(),
+        barcode: z.string().optional().nullable(),
         unitOfMeasure: z.string(),
         minStock: z.number(),
-        maxStock: z.number().optional(),
+        maxStock: z.number().optional().nullable(),
         sellingPrice: z.number(),
-        aisle: z.string().optional(),
-        shelf: z.string().optional(),
-        batch: z.string().optional(),
+        averageCost: z.number().optional(), // Novo campo permitido para edição
+        aisle: z.string().optional().nullable(),
+        shelf: z.string().optional().nullable(),
+        batch: z.string().optional().nullable(),
       })
     }
   }, async (request, reply) => {
@@ -193,7 +194,16 @@ export async function productRoutes(app: FastifyInstance) {
 
     const updatedProduct = await prisma.product.update({
       where: { id },
-      data
+      data: {
+        ...data,
+        // Garantir que nulos do frontend não quebrem o Prisma se o campo for String?
+        description: data.description || null,
+        barcode: data.barcode || null,
+        maxStock: data.maxStock || null,
+        aisle: data.aisle || null,
+        shelf: data.shelf || null,
+        batch: data.batch || null,
+      }
     })
 
     return updatedProduct

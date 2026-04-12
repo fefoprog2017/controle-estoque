@@ -40,16 +40,13 @@ export class MovementService {
       let newAverageCost = product.averageCost
 
       if (params.type === 'IN') {
-        // Recalcular Custo Médio: (Estoque Atual * Custo Atual + Qtd Nova * Custo Novo) / (Estoque Atual + Qtd Nova)
-        const totalValueOld = product.currentStock * product.averageCost
-        const totalValueNew = params.quantity * params.unitValue
-        newStock += params.quantity
-        newAverageCost = (totalValueOld + totalValueNew) / newStock
+        // ENTRADA: Conforme solicitado, entrada não altera estoque físico (foi subido via Subir Base)
+        // Apenas mantemos o registro para histórico de compra
+        console.log('Movimentação de Entrada registrada apenas para histórico.')
       } else if (params.type === 'OUT') {
+        // SAÍDA: Diminui o estoque conforme a quantidade movimentada
         newStock -= params.quantity
       } else if (params.type === 'ADJUSTMENT') {
-        // No ajuste, a quantidade enviada é a nova quantidade absoluta ou relativa? 
-        // Vamos considerar como relativo (positivo soma, negativo subtrai)
         newStock += params.quantity
       }
 
@@ -62,8 +59,9 @@ export class MovementService {
           totalValue: params.quantity * params.unitValue,
           productId: params.productId,
           userId: params.userId,
-          supplierId: params.supplierId,
-          clientId: params.clientId,
+          // Corrigindo FK: Se o ID vier vazio ou string vazia, deve ser null para não violar constraint
+          supplierId: params.supplierId && params.supplierId !== "undefined" && params.supplierId !== "" ? params.supplierId : null,
+          clientId: params.clientId && params.clientId !== "undefined" && params.clientId !== "" ? params.clientId : null,
           invoiceNumber: params.invoiceNumber,
           outwardReason: params.outwardReason,
           notes: params.notes,
