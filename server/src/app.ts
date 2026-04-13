@@ -21,8 +21,15 @@ export const app = fastify({
 }).setValidatorCompiler(validatorCompiler).setSerializerCompiler(serializerCompiler)
 
 app.register(cors, {
-  origin: '*',
-  exposedHeaders: ['Content-Disposition'] // Necessário para download de arquivos
+  origin: true, // Permitir qualquer origem dinâmica
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: '*', // Permitir qualquer header
+  credentials: true,
+  exposedHeaders: ['Content-Disposition']
+})
+
+app.addHook('preHandler', async (request, reply) => {
+  console.log(`[REQUEST] ${request.method} ${request.url}`)
 })
 
 app.register(multipart, {

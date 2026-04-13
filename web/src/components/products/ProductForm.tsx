@@ -12,8 +12,9 @@ const productSchema = z.object({
   barcode: z.string().optional(),
   unitOfMeasure: z.string().min(1, 'Unidade é obrigatória'),
   minStock: z.coerce.number().min(0),
+  purchasePrice: z.coerce.number().min(0),
   sellingPrice: z.coerce.number().min(0),
-  averageCost: z.coerce.number().min(0), // Novo campo no schema
+  averageCost: z.coerce.number().min(0),
   description: z.string().optional(),
   aisle: z.string().optional(),
   shelf: z.string().optional(),
@@ -31,8 +32,9 @@ interface ProductFormProps {
     barcode?: string | null
     unitOfMeasure: string
     minStock: number
+    purchasePrice: number
     sellingPrice: number
-    averageCost: number // Novo campo nas props
+    averageCost: number
     description?: string | null
     aisle?: string | null
     shelf?: string | null
@@ -49,8 +51,9 @@ export function ProductForm({ onSuccess, product }: ProductFormProps) {
       barcode: product?.barcode || '',
       unitOfMeasure: product?.unitOfMeasure || 'UN',
       minStock: product?.minStock || 0,
+      purchasePrice: product?.purchasePrice || 0,
       sellingPrice: product?.sellingPrice || 0,
-      averageCost: product?.averageCost || 0, // Novo valor default
+      averageCost: product?.averageCost || 0,
       description: product?.description || '',
       aisle: product?.aisle || '',
       shelf: product?.shelf || '',
@@ -62,8 +65,8 @@ export function ProductForm({ onSuccess, product }: ProductFormProps) {
     try {
       if (product) {
         await api.put(`/products/${product.id}`, data)
+        alert('Produto atualizado com sucesso!')
       } else {
-        // Lógica de criação original
         let categoryId;
         try {
           const categories = await api.get('/categories')
@@ -77,6 +80,7 @@ export function ProductForm({ onSuccess, product }: ProductFormProps) {
           categoryId: categoryId || "00000000-0000-0000-0000-000000000000" 
         }
         await api.post('/products', payload)
+        alert('Produto cadastrado com sucesso!')
       }
       onSuccess()
     } catch (error: any) {
@@ -98,17 +102,16 @@ export function ProductForm({ onSuccess, product }: ProductFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
-      {/* ... (campos de formulário permanecem os mesmos) ... */}
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4 overflow-y-auto max-h-[70vh] px-2">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="name">Nome do Produto</Label>
-          <Input id="name" {...register('name')} placeholder="Ex: Cimento CP-II" />
+          <Label htmlFor="name">Nome do Modelo/Produto</Label>
+          <Input id="name" {...register('name')} placeholder="Ex: Camisa Social Slim" />
           {errors.name && <p className="text-xs text-red-500">{errors.name.message}</p>}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="sku">SKU / Código Interno</Label>
-          <Input id="sku" {...register('sku')} placeholder="Ex: CIM-001" />
+          <Label htmlFor="sku">SKU / Referência</Label>
+          <Input id="sku" {...register('sku')} placeholder="Ex: MOD-123" />
           {errors.sku && <p className="text-xs text-red-500">{errors.sku.message}</p>}
         </div>
       </div>
@@ -116,7 +119,7 @@ export function ProductForm({ onSuccess, product }: ProductFormProps) {
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="unitOfMeasure">Unidade de Medida</Label>
-          <Input id="unitOfMeasure" {...register('unitOfMeasure')} placeholder="UN, KG, M2..." />
+          <Input id="unitOfMeasure" {...register('unitOfMeasure')} placeholder="UN, PC, PAR..." />
         </div>
         <div className="space-y-2">
           <Label htmlFor="barcode">Código de Barras (EAN)</Label>
@@ -124,14 +127,23 @@ export function ProductForm({ onSuccess, product }: ProductFormProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4 border p-4 rounded-lg bg-muted/30">
         <div className="space-y-2">
-          <Label htmlFor="sellingPrice">Preço de Venda (R$)</Label>
-          <Input id="sellingPrice" type="number" step="0.01" {...register('sellingPrice')} />
+          <Label htmlFor="purchasePrice" className="text-indigo-700 font-bold">Preço de Compra (R$)</Label>
+          <Input id="purchasePrice" type="number" step="0.01" {...register('purchasePrice')} className="border-indigo-200" />
+          <p className="text-[10px] text-muted-foreground">Valor pago no fornecedor (ex: PDF)</p>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="averageCost">Custo Médio (R$)</Label>
-          <Input id="averageCost" type="number" step="0.01" {...register('averageCost')} />
+          <Label htmlFor="sellingPrice" className="text-emerald-700 font-bold">Preço de Venda (R$)</Label>
+          <Input id="sellingPrice" type="number" step="0.01" {...register('sellingPrice')} className="border-emerald-200" />
+          <p className="text-[10px] text-muted-foreground">Valor cobrado do seu cliente</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="averageCost">Custo Médio Calculado (R$)</Label>
+          <Input id="averageCost" type="number" step="0.01" {...register('averageCost')} readOnly className="bg-muted" />
         </div>
         <div className="space-y-2">
           <Label htmlFor="minStock">Estoque Mínimo (Alerta)</Label>

@@ -25,7 +25,7 @@ REGRAS DE LIMPEZA:
 FORMATO DE SAÍDA:
 Apenas um array JSON puro (sem markdown, sem explicações):
 [
-  { "sku": "ABC", "nome": "Camiseta", "cor": "Azul", "tam": "M", "qtd": 10, "sellingPrice": 29.90 }
+  { "sku": "ABC", "nome": "Camiseta", "cor": "Azul", "tam": "M", "qtd": 10, "purchasePrice": 29.90 }
 ]
 `
 
@@ -72,8 +72,8 @@ export async function aiRoutes(app: FastifyInstance) {
     console.log('Arquivo carregado com sucesso:', filename, 'Mime:', mimeType, 'Tamanho:', fileBuffer.length)
 
     try {
-      console.log('Iniciando extração com Gemini Flash Latest...')
-      const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' })
+      console.log('Iniciando extração com Gemini 1.5 PRO (Licença Paga)...')
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' })
 
       const result = await model.generateContent([
         SYSTEM_PROMPT,
@@ -90,17 +90,16 @@ export async function aiRoutes(app: FastifyInstance) {
       
       console.log('Resposta bruta da IA recebida.')
       
-      // Limpeza robusta de Markdown e espaços
-      text = text.replace(/```json/g, '')
-                 .replace(/```/g, '')
-                 .trim()
+      // EXTRAÇÃO ROBUSTA: Busca apenas o conteúdo dentro de colchetes []
+      const jsonMatch = text.match(/\[[\s\S]*\]/)
+      const cleanJson = jsonMatch ? jsonMatch[0] : text
       
       try {
-        const products = JSON.parse(text)
+        const products = JSON.parse(cleanJson)
         console.log(`Sucesso: ${products.length} produtos extraídos.`)
         return { products }
       } catch (e) {
-        console.error('ERRO DE PARSE JSON. Resposta da IA:', text)
+        console.error('ERRO DE PARSE JSON. Resposta limpa:', cleanJson)
         return reply.status(500).send({ message: 'A IA gerou um formato inválido. Tente novamente.' })
       }
 

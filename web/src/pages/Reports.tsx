@@ -76,8 +76,8 @@ export function ReportsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="outline" className="w-full gap-2" disabled>
-              Em breve
+            <Button variant="outline" className="w-full gap-2 border-dashed bg-muted/50 text-muted-foreground" disabled>
+              Bloqueado
             </Button>
           </CardContent>
         </Card>
@@ -94,8 +94,8 @@ export function ReportsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="outline" className="w-full gap-2" disabled>
-              Em breve
+            <Button variant="outline" className="w-full gap-2 border-dashed bg-muted/50 text-muted-foreground" disabled>
+              Bloqueado
             </Button>
           </CardContent>
         </Card>

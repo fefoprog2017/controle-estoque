@@ -11,17 +11,19 @@ export async function productRoutes(app: FastifyInstance) {
     schema: {
       body: z.object({
         name: z.string(),
-        description: z.string().optional(),
+        description: z.string().optional().nullable(),
         sku: z.string(),
-        barcode: z.string().optional(),
+        barcode: z.string().optional().nullable(),
         unitOfMeasure: z.string(),
         minStock: z.number().default(0),
-        maxStock: z.number().optional(),
+        maxStock: z.number().optional().nullable(),
+        purchasePrice: z.number().default(0),
         sellingPrice: z.number().default(0),
+        averageCost: z.number().default(0), 
         categoryId: z.string().uuid(),
-        aisle: z.string().optional(),
-        shelf: z.string().optional(),
-        batch: z.string().optional(),
+        aisle: z.string().optional().nullable(),
+        shelf: z.string().optional().nullable(),
+        batch: z.string().optional().nullable(),
       })
     }
   }, async (request, reply) => {
@@ -39,7 +41,12 @@ export async function productRoutes(app: FastifyInstance) {
       data: {
         ...data,
         currentStock: 0,
-        averageCost: 0,
+        description: data.description || null,
+        barcode: data.barcode || null,
+        maxStock: data.maxStock || null,
+        aisle: data.aisle || null,
+        shelf: data.shelf || null,
+        batch: data.batch || null,
       }
     })
 
@@ -52,9 +59,10 @@ export async function productRoutes(app: FastifyInstance) {
       include: {
         category: true
       },
-      orderBy: {
-        name: 'asc'
-      }
+      orderBy: [
+        { name: 'asc' },
+        { size: 'asc' }
+      ]
     })
     return products
   })
@@ -96,7 +104,7 @@ export async function productRoutes(app: FastifyInstance) {
           cor: z.string().optional().nullable(),
           tam: z.string().optional().nullable(),
           qtd: z.number(),
-          sellingPrice: z.number(),
+          purchasePrice: z.number(),
         }))
       })
     }
@@ -105,7 +113,6 @@ export async function productRoutes(app: FastifyInstance) {
     console.log(`--- INICIANDO BULK INSERT: ${products.length} itens ---`)
 
     try {
-      // Buscar categoria padrão
       let defaultCategory = await prisma.category.findFirst({
         where: { name: 'Escritório' }
       })
@@ -121,13 +128,13 @@ export async function productRoutes(app: FastifyInstance) {
       for (const item of products) {
         console.log(`Processando SKU: ${item.sku} | Nome: ${item.nome}`)
         
-        // Garantir que campos opcionais não quebrem o Prisma se vierem null da IA
         const product = await prisma.product.upsert({
           where: { sku: item.sku },
           update: {
             currentStock: { increment: item.qtd },
-            sellingPrice: item.sellingPrice,
-            name: item.nome, // Atualiza o nome também caso tenha mudado
+            purchasePrice: item.purchasePrice,
+            averageCost: item.purchasePrice, // Por enquanto simplificado: último vira média
+            name: item.nome,
             color: item.cor || null,
             size: item.tam || null,
           },
@@ -137,7 +144,9 @@ export async function productRoutes(app: FastifyInstance) {
             color: item.cor || null,
             size: item.tam || null,
             currentStock: item.qtd,
-            sellingPrice: item.sellingPrice,
+            purchasePrice: item.purchasePrice,
+            averageCost: item.purchasePrice,
+            sellingPrice: 0, // Usuário definirá manualmente depois
             unitOfMeasure: 'UN',
             categoryId: defaultCategory.id
           }
@@ -152,7 +161,7 @@ export async function productRoutes(app: FastifyInstance) {
       return reply.status(500).send({ 
         message: 'Erro ao processar o cadastro no banco de dados.',
         error: error.message,
-        code: error.code // Útil para erros do Prisma como P2002
+        code: error.code
       })
     }
   })
@@ -176,6 +185,7 @@ export async function productRoutes(app: FastifyInstance) {
         unitOfMeasure: z.string(),
         minStock: z.number(),
         maxStock: z.number().optional().nullable(),
+        purchasePrice: z.number(),
         sellingPrice: z.number(),
         averageCost: z.number().optional(),
         aisle: z.string().optional().nullable(),
@@ -187,28 +197,24 @@ export async function productRoutes(app: FastifyInstance) {
     const { id } = request.params
     const data = request.body
 
-    // 1. Verificar se o produto existe
     const product = await prisma.product.findUnique({ where: { id } })
     if (!product) {
       return reply.status(404).send({ message: 'Produto não encontrado.' })
     }
 
-    // 2. Tratar campos únicos (Trim e Nullify)
     const sku = data.sku.trim()
     const barcode = data.barcode?.trim() || null
 
-    // 3. Verificar se o SKU já existe em OUTRO produto
     const existingSku = await prisma.product.findFirst({
       where: { 
         sku,
-        id: { not: id } // Ignorar o próprio produto que estamos editando
+        id: { not: id }
       }
     })
     if (existingSku) {
       return reply.status(400).send({ message: `O SKU "${sku}" já está em uso por outro produto.` })
     }
 
-    // 4. Verificar se o Barcode já existe em OUTRO produto (se não for nulo)
     if (barcode) {
       const existingBarcode = await prisma.product.findFirst({
         where: { 
@@ -221,7 +227,6 @@ export async function productRoutes(app: FastifyInstance) {
       }
     }
 
-    // 5. Atualizar de forma explícita
     try {
       const updatedProduct = await prisma.product.update({
         where: { id },
@@ -231,8 +236,9 @@ export async function productRoutes(app: FastifyInstance) {
           barcode: barcode,
           unitOfMeasure: data.unitOfMeasure,
           minStock: data.minStock,
+          purchasePrice: data.purchasePrice,
           sellingPrice: data.sellingPrice,
-          averageCost: data.averageCost,
+          averageCost: data.averageCost ?? product.averageCost,
           description: data.description || null,
           maxStock: data.maxStock || null,
           aisle: data.aisle || null,

@@ -40,11 +40,14 @@ export class MovementService {
       let newAverageCost = product.averageCost
 
       if (params.type === 'IN') {
-        // ENTRADA: Conforme solicitado, entrada não altera estoque físico (foi subido via Subir Base)
-        // Apenas mantemos o registro para histórico de compra
-        console.log('Movimentação de Entrada registrada apenas para histórico.')
+        // ENTRADA: Aumenta o estoque e recalcula o custo médio
+        const totalValueOld = product.currentStock * product.averageCost
+        const totalValueNew = params.quantity * params.unitValue
+        
+        newStock = product.currentStock + params.quantity
+        newAverageCost = (totalValueOld + totalValueNew) / newStock
       } else if (params.type === 'OUT') {
-        // SAÍDA: Diminui o estoque conforme a quantidade movimentada
+        // SAÍDA: Diminui o estoque físico
         newStock -= params.quantity
       } else if (params.type === 'ADJUSTMENT') {
         newStock += params.quantity

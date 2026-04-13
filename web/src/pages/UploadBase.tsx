@@ -12,7 +12,7 @@ interface ExtractedProduct {
   cor: string
   tam: string
   qtd: number
-  sellingPrice: number
+  purchasePrice: number
 }
 
 export function UploadBasePage() {
@@ -87,7 +87,7 @@ export function UploadBasePage() {
   return (
     <div className="p-8 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Subir Base</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Subir Base (IA)</h1>
         <p className="text-muted-foreground">Importe pedidos em PDF ou Imagem para extração automática via IA.</p>
       </div>
 
@@ -155,7 +155,7 @@ export function UploadBasePage() {
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle>Conferência de Dados</CardTitle>
-              <CardDescription>Verifique os produtos identificados pela IA antes de salvar.</CardDescription>
+              <CardDescription>Verifique os produtos identificados pela IA antes de salvar no estoque.</CardDescription>
             </div>
             {extractedData.length > 0 && (
               <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={handleConfirmInventory}>
@@ -173,7 +173,7 @@ export function UploadBasePage() {
                       <TableHead>Produto</TableHead>
                       <TableHead>Cor/Tam</TableHead>
                       <TableHead>Qtd</TableHead>
-                      <TableHead>Preço</TableHead>
+                      <TableHead>Preço Compra</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -183,7 +183,9 @@ export function UploadBasePage() {
                         <TableCell className="font-medium">{prod.nome}</TableCell>
                         <TableCell className="text-xs">{prod.cor} / {prod.tam}</TableCell>
                         <TableCell className="font-bold">{prod.qtd}</TableCell>
-                        <TableCell>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(prod.sellingPrice)}</TableCell>
+                        <TableCell className="text-indigo-600 font-bold">
+                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(prod.purchasePrice)}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

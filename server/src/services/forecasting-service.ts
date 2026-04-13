@@ -13,24 +13,7 @@ export interface ForecastResult {
 }
 
 export class ForecastingService {
-  static async getProductForecast(productId: string): Promise<ForecastResult> {
-    const product = await prisma.product.findUnique({
-      where: { id: productId },
-      include: {
-        movements: {
-          where: {
-            type: 'OUT',
-            createdAt: {
-              gte: subDays(new Date(), 30) // Últimos 30 dias
-            }
-          },
-          orderBy: { createdAt: 'asc' }
-        }
-      }
-    })
-
-    if (!product) throw new Error('Product not found')
-
+  private static calculateForecast(product: any): ForecastResult {
     if (product.currentStock <= 0) {
       return {
         productId: product.id,
@@ -44,9 +27,8 @@ export class ForecastingService {
       }
     }
 
-    const totalOut = product.movements.reduce((acc, m) => acc + m.quantity, 0)
+    const totalOut = product.movements.reduce((acc: number, m: any) => acc + m.quantity, 0)
     
-    // Se não houve vendas nos últimos 30 dias
     if (totalOut === 0) {
       return {
         productId: product.id,
@@ -60,7 +42,6 @@ export class ForecastingService {
       }
     }
 
-    // Calcular dias reais com dados (desde a primeira venda no período até hoje)
     const firstSaleDate = product.movements[0].createdAt
     const daysInPeriod = Math.max(differenceInDays(new Date(), firstSaleDate), 1)
     
@@ -86,17 +67,41 @@ export class ForecastingService {
     }
   }
 
-  static async getAllForecasts(): Promise<ForecastResult[]> {
-    const products = await prisma.product.findMany({
-      select: { id: true }
+  static async getProductForecast(productId: string): Promise<ForecastResult> {
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      include: {
+        movements: {
+          where: {
+            type: 'OUT',
+            createdAt: { gte: subDays(new Date(), 30) }
+          },
+          orderBy: { createdAt: 'asc' }
+        }
+      }
     })
 
-    const forecasts = await Promise.all(
-      products.map(p => this.getProductForecast(p.id))
-    )
+    if (!product) throw new Error('Product not found')
+    return this.calculateForecast(product)
+  }
+
+  static async getAllForecasts(): Promise<ForecastResult[]> {
+    // OTİMİZAÇÃO: Busca todos os produtos e movimentações em uma ÚNICA query (Evita N+1)
+    const products = await prisma.product.findMany({
+      include: {
+        movements: {
+          where: {
+            type: 'OUT',
+            createdAt: { gte: subDays(new Date(), 30) }
+          },
+          orderBy: { createdAt: 'asc' }
+        }
+      }
+    })
+
+    const forecasts = products.map(p => this.calculateForecast(p))
 
     return forecasts.sort((a, b) => {
-      // Priorizar os críticos e com menos dias restantes
       const statusOrder = { 'OUT_OF_STOCK': 0, 'CRITICAL': 1, 'WARNING': 2, 'STABLE': 3 }
       if (statusOrder[a.status] !== statusOrder[b.status]) {
         return statusOrder[a.status] - statusOrder[b.status]

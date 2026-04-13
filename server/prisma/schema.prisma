@@ -74,6 +74,7 @@ model Product {
   maxStock        Float?
 
   averageCost     Float    @default(0) 
+  purchasePrice   Float    @default(0) 
   sellingPrice    Float    @default(0) 
 
   aisle           String?  

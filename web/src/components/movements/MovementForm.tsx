@@ -13,8 +13,7 @@ const movementSchema = z.object({
   quantity: z.coerce.number().min(0.01, 'Quantidade deve ser maior que zero'),
   unitValue: z.coerce.number().min(0.01, 'Valor deve ser maior que zero'),
   invoiceNumber: z.string().optional(),
-  notes: z.string().optional(),
-  // Para arquivos, lidaremos manualmente fora do register básico se necessário
+  notes: z.string().min(5, 'A observação deve ter pelo menos 5 caracteres'),
 })
 
 type MovementFormValues = z.infer<typeof movementSchema>
@@ -83,11 +82,11 @@ export function MovementForm({ onSuccess }: MovementFormProps) {
         <div className="flex gap-4">
           <label className={`flex-1 border p-3 rounded-md cursor-pointer flex items-center gap-2 ${type === 'IN' ? 'border-emerald-500 bg-emerald-50' : ''}`}>
             <input type="radio" value="IN" {...register('type')} className="accent-emerald-600" />
-            <span className="text-sm font-medium">Entrada (Compra)</span>
+            <span className="text-sm font-medium">Entrada (Devolução)</span>
           </label>
           <label className={`flex-1 border p-3 rounded-md cursor-pointer flex items-center gap-2 ${type === 'OUT' ? 'border-rose-500 bg-rose-50' : ''}`}>
             <input type="radio" value="OUT" {...register('type')} className="accent-rose-600" />
-            <span className="text-sm font-medium">Saída (Venda/Obra)</span>
+            <span className="text-sm font-medium">Saída (Venda/Devolução)</span>
           </label>
         </div>
       </div>
@@ -120,27 +119,26 @@ export function MovementForm({ onSuccess }: MovementFormProps) {
         </div>
       </div>
 
-      {type === 'IN' && (
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="invoiceNumber">Número da NFe</Label>
-            <Input id="invoiceNumber" {...register('invoiceNumber')} placeholder="000.000.000" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="file">Anexo da Nota (PDF/IMG)</Label>
-            <Input 
-              id="file" 
-              type="file" 
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
-              className="cursor-pointer"
-            />
-          </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="invoiceNumber">Número da NFe (Opcional)</Label>
+          <Input id="invoiceNumber" {...register('invoiceNumber')} placeholder="000.000.000" />
         </div>
-      )}
+        <div className="space-y-2">
+          <Label htmlFor="file">Anexo da Nota (PDF/IMG)</Label>
+          <Input 
+            id="file" 
+            type="file" 
+            onChange={(e) => setFile(e.target.files?.[0] || null)}
+            className="cursor-pointer"
+          />
+        </div>
+      </div>
 
       <div className="space-y-2">
-        <Label htmlFor="notes">Observações / Motivo</Label>
-        <Input id="notes" {...register('notes')} placeholder="Ex: Carga recebida sem avarias..." />
+        <Label htmlFor="notes">Observações / Motivo (Obrigatório)</Label>
+        <Input id="notes" {...register('notes')} placeholder="Ex: Venda para cliente ou devolução..." />
+        {errors.notes && <p className="text-xs text-red-500">{errors.notes.message}</p>}
       </div>
 
       <Button type="submit" className="w-full" disabled={isSubmitting}>
