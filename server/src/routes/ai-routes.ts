@@ -72,8 +72,8 @@ export async function aiRoutes(app: FastifyInstance) {
     console.log('Arquivo carregado com sucesso:', filename, 'Mime:', mimeType, 'Tamanho:', fileBuffer.length)
 
     try {
-      console.log('Iniciando extração com Gemini 1.5 PRO...')
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' })
+      console.log('Iniciando extração com Gemini 1.5 FLASH (Alta Estabilidade)...')
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
       const result = await model.generateContent([
         SYSTEM_PROMPT,
