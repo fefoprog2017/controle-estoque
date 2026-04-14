@@ -99,19 +99,25 @@ export async function aiRoutes(app: FastifyInstance) {
         
         // SANITIZAÇÃO: Garante que os números sejam números e limpa strings
         products = products.map((p: any) => {
-          // Converter quantidade para número (removendo caracteres não numéricos exceto ponto/vírgula)
-          let cleanQtd = String(p.qtd).replace(/[^\d,.]/g, '').replace(',', '.')
-          let qtd = parseFloat(cleanQtd) || 0
+          // Tenta pegar o preço de qualquer campo provável que a IA envie
+          const rawPrice = p.purchasePrice || p.sellingPrice || p.preco || p.valor || 0;
+          const rawQtd = p.qtd || p.quantidade || 0;
+
+          // Converter quantidade para número
+          let cleanQtd = String(rawQtd).replace(/[^\d,.]/g, '').replace(',', '.')
+          let qtd = parseFloat(cleanQtd)
+          if (isNaN(qtd)) qtd = 0
 
           // Converter preço para número (removendo R$, $, espaços, etc)
-          let cleanPrice = String(p.purchasePrice).replace(/[^\d,.]/g, '').replace(',', '.')
-          let purchasePrice = parseFloat(cleanPrice) || 0
+          let cleanPrice = String(rawPrice).replace(/[^\d,.]/g, '').replace(',', '.')
+          let purchasePrice = parseFloat(cleanPrice)
+          if (isNaN(purchasePrice)) purchasePrice = 0
 
           return {
-            sku: String(p.sku || ''),
-            nome: String(p.nome || ''),
+            sku: String(p.sku || p.referencia || ''),
+            nome: String(p.nome || p.descricao || ''),
             cor: String(p.cor || ''),
-            tam: String(p.tam || ''),
+            tam: String(p.tam || p.tamanho || ''),
             qtd: qtd,
             purchasePrice: purchasePrice
           }
