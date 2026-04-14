@@ -15,8 +15,8 @@ REGRAS DE MAPEAMENTO:
 - SKU/Código: Identificar códigos alfanuméricos únicos do produto.
 - Descrição: Nome do item, ignorando códigos redundantes.
 - Atributos: Separar explicitamente Cor e Tamanho (P, M, G, GG, 36-54, etc).
-- Quantidade: Converter para número (float).
-- Preço: Valor unitário (float).
+- Quantidade: Converter para número puro (ex: 10 ou 10.5).
+- Preço: Valor unitário como número puro, SEM símbolo de moeda e usando PONTO como decimal (ex: 29.90).
 
 REGRAS DE LIMPEZA:
 - IGNORE: Dados do emissor, dados do destinatário, logotipos, totais da nota, impostos (ICMS/IPI) e rodapés.
@@ -72,7 +72,7 @@ export async function aiRoutes(app: FastifyInstance) {
     console.log('Arquivo carregado com sucesso:', filename, 'Mime:', mimeType, 'Tamanho:', fileBuffer.length)
 
     try {
-      console.log('Iniciando extração com Gemini 1.5 PRO (Licença Paga)...')
+      console.log('Iniciando extração com Gemini 1.5 PRO...')
       const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' })
 
       const result = await model.generateContent([
@@ -95,8 +95,29 @@ export async function aiRoutes(app: FastifyInstance) {
       const cleanJson = jsonMatch ? jsonMatch[0] : text
       
       try {
-        const products = JSON.parse(cleanJson)
-        console.log(`Sucesso: ${products.length} produtos extraídos.`)
+        let products = JSON.parse(cleanJson)
+        
+        // SANITIZAÇÃO: Garante que os números sejam números e limpa strings
+        products = products.map((p: any) => {
+          // Converter quantidade para número (removendo caracteres não numéricos exceto ponto/vírgula)
+          let cleanQtd = String(p.qtd).replace(/[^\d,.]/g, '').replace(',', '.')
+          let qtd = parseFloat(cleanQtd) || 0
+
+          // Converter preço para número (removendo R$, $, espaços, etc)
+          let cleanPrice = String(p.purchasePrice).replace(/[^\d,.]/g, '').replace(',', '.')
+          let purchasePrice = parseFloat(cleanPrice) || 0
+
+          return {
+            sku: String(p.sku || ''),
+            nome: String(p.nome || ''),
+            cor: String(p.cor || ''),
+            tam: String(p.tam || ''),
+            qtd: qtd,
+            purchasePrice: purchasePrice
+          }
+        })
+
+        console.log(`Sucesso: ${products.length} produtos extraídos e sanitizados.`)
         return { products }
       } catch (e) {
         console.error('ERRO DE PARSE JSON. Resposta limpa:', cleanJson)
