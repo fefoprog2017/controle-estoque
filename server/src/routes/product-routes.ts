@@ -128,12 +128,15 @@ export async function productRoutes(app: FastifyInstance) {
       for (const item of products) {
         console.log(`Processando SKU: ${item.sku} | Nome: ${item.nome}`)
         
+        // Pega o preço de compra vindo do item (ou tenta nomes alternativos se o front estiver com cache)
+        const purchasePrice = item.purchasePrice || (item as any).sellingPrice || 0;
+
         const product = await prisma.product.upsert({
           where: { sku: item.sku },
           update: {
             currentStock: { increment: item.qtd },
-            purchasePrice: item.purchasePrice,
-            averageCost: item.purchasePrice, // Por enquanto simplificado: último vira média
+            purchasePrice: purchasePrice,
+            averageCost: purchasePrice, // Atualiza média com a última compra
             name: item.nome,
             color: item.cor || null,
             size: item.tam || null,
@@ -144,9 +147,9 @@ export async function productRoutes(app: FastifyInstance) {
             color: item.cor || null,
             size: item.tam || null,
             currentStock: item.qtd,
-            purchasePrice: item.purchasePrice,
-            averageCost: item.purchasePrice,
-            sellingPrice: 0, // Usuário definirá manualmente depois
+            purchasePrice: purchasePrice,
+            averageCost: purchasePrice,
+            sellingPrice: 0, // Novo produto sempre começa com venda zero
             unitOfMeasure: 'UN',
             categoryId: defaultCategory.id
           }

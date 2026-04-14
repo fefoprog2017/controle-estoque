@@ -177,17 +177,22 @@ export function UploadBasePage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {extractedData.map((prod, idx) => (
-                      <TableRow key={idx}>
-                        <TableCell className="font-mono text-xs">{prod.sku}</TableCell>
-                        <TableCell className="font-medium">{prod.nome}</TableCell>
-                        <TableCell className="text-xs">{prod.cor} / {prod.tam}</TableCell>
-                        <TableCell className="font-bold">{prod.qtd}</TableCell>
-                        <TableCell className="text-indigo-600 font-bold">
-                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(prod.purchasePrice)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {extractedData.map((prod, idx) => {
+                      // Tenta pegar o preço de compra, senão tenta sellingPrice (caso a API venha antiga)
+                      const displayPrice = prod.purchasePrice || (prod as any).sellingPrice || 0;
+                      
+                      return (
+                        <TableRow key={idx}>
+                          <TableCell className="font-mono text-xs">{prod.sku}</TableCell>
+                          <TableCell className="font-medium">{prod.nome}</TableCell>
+                          <TableCell className="text-xs">{prod.cor} / {prod.tam}</TableCell>
+                          <TableCell className="font-bold">{prod.qtd}</TableCell>
+                          <TableCell className="text-indigo-600 font-bold">
+                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(displayPrice)}
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
                   </TableBody>
                 </Table>
               </div>
