@@ -5,6 +5,7 @@ import { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { prisma } from '../lib/prisma'
 import 'dotenv/config'
 
+// Inicializa com a versão estável v1 para evitar erros 404 da v1beta
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
 const SYSTEM_PROMPT = `
@@ -72,10 +73,9 @@ export async function aiRoutes(app: FastifyInstance) {
     console.log('Arquivo carregado com sucesso:', filename, 'Mime:', mimeType, 'Tamanho:', fileBuffer.length)
 
     try {
-      console.log('Iniciando extração com Gemini 1.5 FLASH (Latest)...')
+      console.log('Iniciando extração com Gemini 1.5 FLASH...')
       
-      // Tentar listar modelos apenas se der erro, mas por enquanto vamos forçar o -latest
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' })
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
       const result = await model.generateContent([
         SYSTEM_PROMPT,
