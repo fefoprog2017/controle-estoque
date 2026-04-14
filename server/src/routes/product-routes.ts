@@ -289,4 +289,38 @@ export async function productRoutes(app: FastifyInstance) {
 
     return reply.status(204).send()
   })
+
+  // 8. Excluir Modelo Inteiro (Todas as variações)
+  appTyped.delete('/products/model/:name', {
+    schema: {
+      params: z.object({
+        name: z.string()
+      })
+    }
+  }, async (request, reply) => {
+    const { name } = request.params
+
+    const products = await prisma.product.findMany({
+      where: { name },
+      include: { movements: true }
+    })
+
+    if (products.length === 0) {
+      return reply.status(404).send({ message: 'Modelo não encontrado.' })
+    }
+
+    // Verificar se ALGUMA variação possui movimentação
+    const hasMovements = products.some(p => p.movements.length > 0)
+    if (hasMovements) {
+      return reply.status(400).send({ 
+        message: 'Não é possível excluir o modelo pois uma ou mais variações possuem movimentações de estoque registradas.' 
+      })
+    }
+
+    await prisma.product.deleteMany({
+      where: { name }
+    })
+
+    return reply.status(204).send()
+  })
 }

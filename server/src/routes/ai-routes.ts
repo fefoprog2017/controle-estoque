@@ -5,8 +5,27 @@ import { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { prisma } from '../lib/prisma'
 import 'dotenv/config'
 
-// Inicializa com a versão estável v1 para evitar erros 404 da v1beta
+// Inicializa a API
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
+
+// Função de diagnóstico para ver o que sua chave permite
+async function listAvailableModels() {
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${process.env.GEMINI_API_KEY}`)
+    const data = await response.json()
+    console.log('--- MODELOS DISPONÍVEIS PARA SUA CHAVE ---')
+    if (data.models) {
+      data.models.forEach((m: any) => console.log(`- ${m.name}`))
+    } else {
+      console.log('Não foi possível listar os modelos:', data)
+    }
+    console.log('------------------------------------------')
+  } catch (e) {
+    console.error('Erro ao listar modelos:', e)
+  }
+}
+
+listAvailableModels()
 
 const SYSTEM_PROMPT = `
 Você é um extrator de dados especializado em logística e notas fiscais de moda/varejo.
@@ -73,24 +92,48 @@ export async function aiRoutes(app: FastifyInstance) {
     console.log('Arquivo carregado com sucesso:', filename, 'Mime:', mimeType, 'Tamanho:', fileBuffer.length)
 
     try {
-      console.log('Iniciando extração com Gemini 1.5 FLASH...')
+      console.log('Iniciando extração via OpenRouter (Modelo Free)...')
       
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+      const responseFetch = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.GEMINI_API_KEY}`, // Usaremos o mesmo campo do .env para a nova chave
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          "model": "google/gemini-2.0-flash-001",
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": SYSTEM_PROMPT
+                },
+                {
+                  "type": "image_url",
+                  "image_url": {
+                    "url": `data:${mimeType};base64,${fileBuffer.toString('base64')}`
+                  }
+                }
+              ]
+            }
+          ],
+          "response_format": { "type": "json_object" }
+        })
+      })
 
-      const result = await model.generateContent([
-        SYSTEM_PROMPT,
-        {
-          inlineData: {
-            data: fileBuffer.toString('base64'),
-            mimeType
-          }
-        }
-      ])
-
-      const response = result.response
-      let text = response.text()
+      const data = await responseFetch.json()
       
-      console.log('Resposta bruta da IA recebida.')
+      if (!responseFetch.ok) {
+        console.error('ERRO OPENROUTER DETALHADO:', JSON.stringify(data, null, 2))
+        const errMsg = data.error?.message || 'Erro desconhecido na IA'
+        return reply.status(responseFetch.status).send({ message: `Erro na IA: ${errMsg}` })
+      }
+
+      // OpenRouter retorna no padrão OpenAI
+      let text = data.choices[0].message.content
+      console.log('Resposta recebida do OpenRouter.')
       
       // EXTRAÇÃO ROBUSTA: Busca apenas o conteúdo dentro de colchetes []
       const jsonMatch = text.match(/\[[\s\S]*\]/)

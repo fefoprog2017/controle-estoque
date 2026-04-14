@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Plus, Search, AlertTriangle, Layers } from 'lucide-react'
+import { Plus, Search, AlertTriangle, Layers, Trash2 } from 'lucide-react'
 import { api } from '@/services/api'
 import {
   Table,
@@ -82,6 +82,20 @@ export function ProductsPage() {
       console.error('Erro ao carregar produtos', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleDeleteModel(name: string, count: number) {
+    if (!confirm(`ATENÇÃO: Você está prestes a excluir o modelo "${name}" e TODAS as suas ${count} variações!\n\nEsta ação removerá o produto por completo da base de dados e é irreversível.\n\nDeseja continuar?`)) {
+      return
+    }
+
+    try {
+      await api.delete(`/products/model/${encodeURIComponent(name)}`)
+      alert('Modelo e variações removidos com sucesso!')
+      loadProducts()
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Erro ao excluir modelo. Verifique se existem movimentações vinculadas.')
     }
   }
 
@@ -234,22 +248,32 @@ export function ProductsPage() {
                         </span>
                       </TableCell>
                       <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="ghost" size="sm">Editar</Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-2xl">
-                            <DialogHeader>
-                              <DialogTitle>Editar Produto</DialogTitle>
-                            </DialogHeader>
-                            <ProductForm 
-                              product={group.variations[0]} 
-                              onSuccess={() => {
-                                loadProducts()
-                              }} 
-                            />
-                          </DialogContent>
-                        </Dialog>
+                        <div className="flex justify-end gap-2">
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button variant="ghost" size="sm">Editar</Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-2xl">
+                              <DialogHeader>
+                                <DialogTitle>Editar Produto</DialogTitle>
+                              </DialogHeader>
+                              <ProductForm 
+                                product={group.variations[0]} 
+                                onSuccess={() => {
+                                  loadProducts()
+                                }} 
+                              />
+                            </DialogContent>
+                          </Dialog>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => handleDeleteModel(group.name, group.variations.length)}
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )

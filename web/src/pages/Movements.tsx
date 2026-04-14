@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { ArrowUpCircle, ArrowDownCircle, Search, FileUp, Plus } from 'lucide-react'
+import { ArrowUpCircle, ArrowDownCircle, Search, FileUp, Plus, Trash2 } from 'lucide-react'
 import { api } from '@/services/api'
 import {
   Table,
@@ -72,6 +72,19 @@ export function MovementsPage() {
     }
   }
 
+  async function handleDelete(id: string) {
+    if (!confirm('Tem certeza que deseja excluir esta movimentação? O saldo do produto será revertido.')) {
+      return
+    }
+
+    try {
+      await api.delete(`/movements/${id}`)
+      loadMovements()
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Erro ao excluir movimentação')
+    }
+  }
+
   return (
     <div className="p-8 space-y-6">
       <div className="flex items-center justify-between">
@@ -128,7 +141,7 @@ export function MovementsPage() {
                 <TableHead>Vlr Total</TableHead>
                 <TableHead>Doc / Ref</TableHead>
                 <TableHead>Responsável</TableHead>
-                <TableHead className="text-right">Anexo</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -173,11 +186,21 @@ export function MovementsPage() {
                     </TableCell>
                     <TableCell className="text-xs">{mov.user?.name || 'Sistema'}</TableCell>
                     <TableCell className="text-right">
-                      {mov.attachment && (
-                        <Button variant="ghost" size="icon" onClick={() => window.open(`http://localhost:3333${mov.attachment?.url}`)}>
-                          <FileUp size={16} className="text-blue-500" />
+                      <div className="flex justify-end gap-2">
+                        {mov.attachment && (
+                          <Button variant="ghost" size="icon" onClick={() => window.open(`http://localhost:3333${mov.attachment?.url}`)}>
+                            <FileUp size={16} className="text-blue-500" />
+                          </Button>
+                        )}
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-rose-500 hover:text-rose-700 hover:bg-rose-50"
+                          onClick={() => handleDelete(mov.id)}
+                        >
+                          <Trash2 size={16} />
                         </Button>
-                      )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

@@ -65,4 +65,15 @@ export async function movementRoutes(app: FastifyInstance) {
       orderBy: { createdAt: 'desc' }
     })
   })
+
+  app.delete('/movements/:id', async (request, reply) => {
+    const { id } = request.params as { id: string }
+    
+    try {
+      await MovementService.delete(id)
+      return reply.status(200).send({ message: 'Movement deleted successfully' })
+    } catch (err: any) {
+      return reply.status(400).send({ message: err.message })
+    }
+  })
 }

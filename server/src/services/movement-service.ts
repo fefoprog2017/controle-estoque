@@ -92,4 +92,47 @@ export class MovementService {
       return movement
     })
   }
+
+  static async delete(id: string) {
+    return await prisma.$transaction(async (tx) => {
+      // 1. Buscar a movimentação
+      const movement = await tx.movement.findUnique({
+        where: { id },
+        include: { product: true }
+      })
+
+      if (!movement) throw new Error('Movement not found')
+
+      // 2. Reverter o saldo do produto
+      let newStock = movement.product.currentStock
+      
+      if (movement.type === 'IN') {
+        // Se era entrada, ao deletar eu diminuo o estoque
+        newStock -= movement.quantity
+      } else if (movement.type === 'OUT') {
+        // Se era saída, ao deletar eu aumento o estoque
+        newStock += movement.quantity
+      } else if (movement.type === 'ADJUSTMENT') {
+        newStock -= movement.quantity
+      }
+
+      // 3. Impedir estoque negativo na reversão (opcional, mas seguro)
+      if (newStock < 0) {
+        throw new Error('Cannot delete this movement: Stock would become negative')
+      }
+
+      // 4. Atualizar o produto
+      await tx.product.update({
+        where: { id: movement.productId },
+        data: { currentStock: newStock }
+      })
+
+      // 5. Deletar a movimentação (e o anexo se houver, o Prisma lida se configurado ou fazemos manual)
+      await tx.movement.delete({
+        where: { id }
+      })
+
+      return { success: true }
+    })
+  }
 }

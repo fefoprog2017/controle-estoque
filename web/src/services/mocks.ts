@@ -4,7 +4,7 @@ import { api } from './api'
 export const setupMocks = () => {
   const mock = new MockAdapter(api, { delayResponse: 500 })
 
-  console.log('🛠️ Mock Mode Ativado: Usando dados estáticos de Papelaria.')
+  console.log('🛠️ Mock Mode Ativado: Usando dados estáticos.')
 
   // 1. Mock do Dashboard
   mock.onGet('/dashboard/stats').reply(200, {
