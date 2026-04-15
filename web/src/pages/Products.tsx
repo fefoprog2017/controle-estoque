@@ -28,6 +28,8 @@ interface Product {
   id: string
   name: string
   sku: string
+  barcode?: string | null
+  description?: string | null
   color?: string | null
   size?: string | null
   currentStock: number
@@ -259,6 +261,7 @@ export function ProductsPage() {
                               </DialogHeader>
                               <ProductForm 
                                 product={group.variations[0]} 
+                                allVariations={group.variations}
                                 onSuccess={() => {
                                   loadProducts()
                                 }} 

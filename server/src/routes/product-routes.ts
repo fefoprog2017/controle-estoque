@@ -21,9 +21,7 @@ export async function productRoutes(app: FastifyInstance) {
         sellingPrice: z.number().default(0),
         averageCost: z.number().default(0), 
         categoryId: z.string().uuid(),
-        aisle: z.string().optional().nullable(),
-        shelf: z.string().optional().nullable(),
-        batch: z.string().optional().nullable(),
+        currentStock: z.number().default(0),
       })
     }
   }, async (request, reply) => {
@@ -40,13 +38,9 @@ export async function productRoutes(app: FastifyInstance) {
     const product = await prisma.product.create({
       data: {
         ...data,
-        currentStock: 0,
         description: data.description || null,
         barcode: data.barcode || null,
         maxStock: data.maxStock || null,
-        aisle: data.aisle || null,
-        shelf: data.shelf || null,
-        batch: data.batch || null,
       }
     })
 
@@ -191,9 +185,7 @@ export async function productRoutes(app: FastifyInstance) {
         purchasePrice: z.number(),
         sellingPrice: z.number(),
         averageCost: z.number().optional(),
-        aisle: z.string().optional().nullable(),
-        shelf: z.string().optional().nullable(),
-        batch: z.string().optional().nullable(),
+        currentStock: z.number().optional(),
       })
     }
   }, async (request, reply) => {
@@ -242,11 +234,9 @@ export async function productRoutes(app: FastifyInstance) {
           purchasePrice: data.purchasePrice,
           sellingPrice: data.sellingPrice,
           averageCost: data.averageCost ?? product.averageCost,
+          currentStock: data.currentStock ?? product.currentStock,
           description: data.description || null,
           maxStock: data.maxStock || null,
-          aisle: data.aisle || null,
-          shelf: data.shelf || null,
-          batch: data.batch || null,
         }
       })
 
@@ -260,7 +250,39 @@ export async function productRoutes(app: FastifyInstance) {
     }
   })
 
-  // 7. Excluir Produto
+  // 7. Atualização em Lote (Estoque/Preços)
+  appTyped.put('/products/bulk-update', {
+    schema: {
+      body: z.object({
+        products: z.array(z.object({
+          id: z.string().uuid(),
+          currentStock: z.number().optional(),
+          purchasePrice: z.number().optional(),
+          sellingPrice: z.number().optional(),
+        }))
+      })
+    }
+  }, async (request, reply) => {
+    const { products } = request.body
+
+    try {
+      await prisma.$transaction(
+        products.map(p => prisma.product.update({
+          where: { id: p.id },
+          data: {
+            currentStock: p.currentStock,
+            purchasePrice: p.purchasePrice,
+            sellingPrice: p.sellingPrice,
+          }
+        }))
+      )
+      return { message: 'Atualização em lote concluída' }
+    } catch (error: any) {
+      return reply.status(500).send({ message: 'Erro ao atualizar em lote', error: error.message })
+    }
+  })
+
+  // 8. Excluir Produto
   appTyped.delete('/products/:id', {
     schema: {
       params: z.object({
