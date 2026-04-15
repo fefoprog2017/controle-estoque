@@ -104,7 +104,7 @@ export async function aiRoutes(app: FastifyInstance) {
 			"X-Title": "Controle-Estoque"
         },
         body: JSON.stringify({
-          "model": "google/gemini-2.0-flash-001",
+          "model": "nvidia/nemotron-3-super-120b-a12b:free",
           "messages": [
             {
               "role": "user",
