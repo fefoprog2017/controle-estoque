@@ -10,9 +10,10 @@ services:
       - ./server/prisma:/app/prisma
       - ./server/uploads:/app/uploads
       - ./server/dev.db:/app/dev.db
+    env_file:
+      - ./server/.env
     environment:
       - NODE_ENV=production
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
     restart: always
 
   frontend:
