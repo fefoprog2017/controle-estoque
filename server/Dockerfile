@@ -31,6 +31,8 @@ WORKDIR /app
 # Copiar arquivos de dependências
 COPY package*.json ./
 RUN npm install
+# Forçar o Puppeteer a baixar o navegador compatível
+RUN npx puppeteer browsers install chrome
 
 # Copiar o restante do código e o Prisma
 COPY . .
