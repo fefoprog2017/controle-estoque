@@ -8,25 +8,6 @@ import 'dotenv/config'
 // Inicializa a API
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
-// Função de diagnóstico para ver o que sua chave permite
-async function listAvailableModels() {
-  try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${process.env.GEMINI_API_KEY}`)
-    const data = await response.json()
-    console.log('--- MODELOS DISPONÍVEIS PARA SUA CHAVE ---')
-    if (data.models) {
-      data.models.forEach((m: any) => console.log(`- ${m.name}`))
-    } else {
-      console.log('Não foi possível listar os modelos:', data)
-    }
-    console.log('------------------------------------------')
-  } catch (e) {
-    console.error('Erro ao listar modelos:', e)
-  }
-}
-
-listAvailableModels()
-
 const SYSTEM_PROMPT = `
 Você é um extrator de dados especializado em logística e notas fiscais de moda/varejo.
 OBJETIVO: Extrair produtos de arquivos PDF/Imagens e converter em JSON padronizado.
@@ -99,12 +80,9 @@ export async function aiRoutes(app: FastifyInstance) {
         headers: {
           "Authorization": `Bearer ${process.env.GEMINI_API_KEY}`, // Usaremos o mesmo campo do .env para a nova chave
           "Content-Type": "application/json"
-		  // Opcional, mas recomendado pelo OpenRouter para rankings:
-			"HTTP-Referer": "http://167.234.239.90/", 
-			"X-Title": "Controle-Estoque"
         },
         body: JSON.stringify({
-          "model": "nvidia/nemotron-3-super-120b-a12b:free",
+          "model": "google/gemini-2.5-flash-lite",
           "messages": [
             {
               "role": "user",
