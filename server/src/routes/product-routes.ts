@@ -259,6 +259,8 @@ export async function productRoutes(app: FastifyInstance) {
           currentStock: z.number().optional(),
           purchasePrice: z.number().optional(),
           sellingPrice: z.number().optional(),
+          color: z.string().optional().nullable(),
+          size: z.string().optional().nullable(),
         }))
       })
     }
@@ -273,6 +275,8 @@ export async function productRoutes(app: FastifyInstance) {
             currentStock: p.currentStock,
             purchasePrice: p.purchasePrice,
             sellingPrice: p.sellingPrice,
+            color: p.color,
+            size: p.size,
           }
         }))
       )

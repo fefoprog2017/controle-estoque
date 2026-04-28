@@ -293,6 +293,10 @@ export function ProductsPage() {
           <ProductGridModal 
             productName={selectedGroup.name} 
             variations={selectedGroup.variations} 
+            onSuccess={() => {
+              setGridOpen(false)
+              loadProducts()
+            }}
           />
         )}
       </Dialog>

@@ -79,9 +79,9 @@ export function ProductForm({ onSuccess, product, allVariations }: ProductFormPr
     }
   }, [allVariations])
 
-  const handleStockChange = (id: string, value: string) => {
+  const handleVariationChange = (id: string, field: keyof VariationStock, value: string | number) => {
     setVariationStocks(prev => prev.map(v => 
-      v.id === id ? { ...v, currentStock: Number(value) } : v
+      v.id === id ? { ...v, [field]: field === 'currentStock' ? Number(value) : value } : v
     ))
   }
 
@@ -108,7 +108,9 @@ export function ProductForm({ onSuccess, product, allVariations }: ProductFormPr
           await api.put('/products/bulk-update', {
             products: variationStocks.map(v => ({
               id: v.id,
-              currentStock: v.currentStock
+              currentStock: v.currentStock,
+              color: v.color,
+              size: v.size
             }))
           })
         }
@@ -201,28 +203,47 @@ export function ProductForm({ onSuccess, product, allVariations }: ProductFormPr
       </div>
 
       <div className="border p-4 rounded-lg bg-blue-50/30 border-blue-100">
-        <Label className="text-blue-800 font-bold block mb-4">Gestão de Estoque</Label>
+        <Label className="text-blue-800 font-bold block mb-4">Gestão de Estoque e Variações</Label>
         
         {hasVariations ? (
           <div className="space-y-3">
             <p className="text-xs text-blue-600 mb-2 font-medium italic">
-              Este produto possui {variationStocks.length} variações. Ajuste o estoque de cada uma individualmente abaixo:
+              Este produto possui {variationStocks.length} variações. Ajuste os detalhes de cada uma abaixo:
             </p>
             <div className="grid grid-cols-1 gap-2">
+              <div className="grid grid-cols-12 gap-2 px-2 text-[10px] font-bold text-blue-800 uppercase">
+                <div className="col-span-3">SKU</div>
+                <div className="col-span-3">Cor</div>
+                <div className="col-span-3">Tamanho</div>
+                <div className="col-span-3 text-right">Estoque</div>
+              </div>
               {variationStocks.map((variation) => (
-                <div key={variation.id} className="flex items-center gap-4 bg-white p-2 rounded border border-blue-100 shadow-sm">
-                  <div className="flex-1">
-                    <p className="text-xs font-bold text-gray-700">{variation.sku}</p>
-                    <p className="text-[10px] text-gray-500">
-                      {variation.color || 'Sem Cor'} • {variation.size || 'Sem Tamanho'}
-                    </p>
+                <div key={variation.id} className="grid grid-cols-12 gap-2 items-center bg-white p-2 rounded border border-blue-100 shadow-sm">
+                  <div className="col-span-3">
+                    <p className="text-[10px] font-bold text-gray-700 truncate" title={variation.sku}>{variation.sku}</p>
                   </div>
-                  <div className="w-32">
+                  <div className="col-span-3">
+                    <Input 
+                      value={variation.color || ''}
+                      onChange={(e) => handleVariationChange(variation.id, 'color', e.target.value)}
+                      placeholder="Cor"
+                      className="h-7 text-[10px] border-blue-100 focus:border-blue-300"
+                    />
+                  </div>
+                  <div className="col-span-3">
+                    <Input 
+                      value={variation.size || ''}
+                      onChange={(e) => handleVariationChange(variation.id, 'size', e.target.value)}
+                      placeholder="Tam"
+                      className="h-7 text-[10px] border-blue-100 focus:border-blue-300"
+                    />
+                  </div>
+                  <div className="col-span-3">
                     <Input 
                       type="number" 
                       value={variation.currentStock}
-                      onChange={(e) => handleStockChange(variation.id, e.target.value)}
-                      className="h-8 text-right font-bold text-blue-700 border-blue-200"
+                      onChange={(e) => handleVariationChange(variation.id, 'currentStock', e.target.value)}
+                      className="h-7 text-right font-bold text-blue-700 border-blue-200 text-xs"
                     />
                   </div>
                 </div>
