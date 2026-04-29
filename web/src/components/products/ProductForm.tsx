@@ -12,6 +12,8 @@ const productSchema = z.object({
   sku: z.string().min(1, 'SKU é obrigatório'),
   barcode: z.string().optional(),
   unitOfMeasure: z.string().min(1, 'Unidade é obrigatória'),
+  color: z.string().optional().nullable(),
+  size: z.string().optional().nullable(),
   minStock: z.coerce.number().min(0),
   purchasePrice: z.coerce.number().min(0),
   sellingPrice: z.coerce.number().min(0),
@@ -39,6 +41,8 @@ interface ProductFormProps {
     sku: string
     barcode?: string | null
     unitOfMeasure: string
+    color?: string | null
+    size?: string | null
     minStock: number
     purchasePrice: number
     sellingPrice: number
@@ -51,13 +55,15 @@ interface ProductFormProps {
 export function ProductForm({ onSuccess, product, allVariations }: ProductFormProps) {
   const [variationStocks, setVariationStocks] = useState<VariationStock[]>([])
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<ProductFormValues>({
+  const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema) as any,
     defaultValues: {
       name: product?.name || '',
       sku: product?.sku || '',
       barcode: product?.barcode || '',
       unitOfMeasure: product?.unitOfMeasure || 'UN',
+      color: product?.color || '',
+      size: product?.size || '',
       minStock: product?.minStock || 0,
       purchasePrice: product?.purchasePrice || 0,
       sellingPrice: product?.sellingPrice || 0,
@@ -66,6 +72,10 @@ export function ProductForm({ onSuccess, product, allVariations }: ProductFormPr
       currentStock: product?.currentStock || 0,
     }
   })
+
+  // Sincronizar campos de cor/tamanho do formulário principal se houver apenas uma variação sendo editada na lista
+  const formColor = watch('color')
+  const formSize = watch('size')
 
   useEffect(() => {
     if (allVariations && allVariations.length > 0) {
@@ -76,35 +86,43 @@ export function ProductForm({ onSuccess, product, allVariations }: ProductFormPr
         size: v.size,
         currentStock: v.currentStock
       })))
+    } else if (product) {
+      setVariationStocks([{
+        id: product.id,
+        sku: product.sku,
+        color: product.color || '',
+        size: product.size || '',
+        currentStock: product.currentStock
+      }])
     }
-  }, [allVariations])
+  }, [allVariations, product])
 
   const handleVariationChange = (id: string, field: keyof VariationStock, value: string | number) => {
-    setVariationStocks(prev => prev.map(v => 
-      v.id === id ? { ...v, [field]: field === 'currentStock' ? Number(value) : value } : v
-    ))
+    setVariationStocks(prev => prev.map(v => {
+      if (v.id === id) {
+        const updated = { ...v, [field]: field === 'currentStock' ? Number(value) : value }
+        // Se for o produto principal sendo editado na lista, sincroniza com o form
+        if (id === product?.id) {
+          if (field === 'color') setValue('color', String(value))
+          if (field === 'size') setValue('size', String(value))
+          if (field === 'currentStock') setValue('currentStock', Number(value))
+        }
+        return updated
+      }
+      return v
+    }))
   }
 
   async function onSubmit(data: ProductFormValues) {
-    console.log('--- SUBMITTING PRODUCT FORM ---')
-    console.log('Target Product ID:', product?.id)
-    console.log('Payload Data:', data)
-
     try {
       if (product && product.id) {
-        // Validação extra do UUID no frontend
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-        if (!uuidRegex.test(product.id)) {
-          alert('Erro de sistema: O ID do produto é inválido (não é um UUID).')
-          return
-        }
 
-        // Primeiro atualiza os dados básicos do produto principal (ou modelo)
+
+        // 1. Atualiza o produto principal (ou a variação selecionada como principal)
         await api.put(`/products/${product.id}`, data)
         
-        // Se houver variações, atualiza o estoque de todas em lote
-        if (variationStocks.length > 0) {
-          console.log('Updating variations in bulk:', variationStocks.length)
+        // 2. Se houver múltiplas variações, atualiza todas em lote
+        if (variationStocks.length > 1) {
           await api.put('/products/bulk-update', {
             products: variationStocks.map(v => ({
               id: v.id,
@@ -135,24 +153,25 @@ export function ProductForm({ onSuccess, product, allVariations }: ProductFormPr
       onSuccess()
     } catch (error: any) {
       console.error('SERVER ERROR:', error.response?.data)
-      alert(error.response?.data?.message || 'Erro ao salvar produto. Verifique os logs do console.')
+      alert(error.response?.data?.message || 'Erro ao salvar produto.')
     }
   }
 
   async function handleDelete() {
     if (!product || !product.id) return
-    
     if (!confirm('Tem certeza que deseja excluir este produto?')) return
 
     try {
       await api.delete(`/products/${product.id}`)
       onSuccess()
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Erro ao excluir produto. Verifique se ele possui movimentações.')
+      alert(error.response?.data?.message || 'Erro ao excluir produto.')
     }
   }
 
-  const hasVariations = variationStocks.length > 1
+  // Se houver mais de uma variação, mostramos a lista. 
+  // Se houver apenas uma, mas ela já tiver cor ou tamanho, também mostramos a lista para manter a consistência de edição.
+  const showVariationsList = variationStocks.length > 1 || (variationStocks.length === 1 && (variationStocks[0].color || variationStocks[0].size))
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4 overflow-y-auto max-h-[80vh] px-2">
@@ -180,6 +199,19 @@ export function ProductForm({ onSuccess, product, allVariations }: ProductFormPr
         </div>
       </div>
 
+      {!showVariationsList && (
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="color">Cor</Label>
+            <Input id="color" {...register('color')} placeholder="Ex: Azul, Branco, Única..." />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="size">Tamanho</Label>
+            <Input id="size" {...register('size')} placeholder="Ex: P, M, G, 42..." />
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-4 border p-4 rounded-lg bg-muted/30">
         <div className="space-y-2">
           <Label htmlFor="purchasePrice" className="text-indigo-700 font-bold">Preço de Compra (R$)</Label>
@@ -205,10 +237,10 @@ export function ProductForm({ onSuccess, product, allVariations }: ProductFormPr
       <div className="border p-4 rounded-lg bg-blue-50/30 border-blue-100">
         <Label className="text-blue-800 font-bold block mb-4">Gestão de Estoque e Variações</Label>
         
-        {hasVariations ? (
+        {showVariationsList ? (
           <div className="space-y-3">
             <p className="text-xs text-blue-600 mb-2 font-medium italic">
-              Este produto possui {variationStocks.length} variações. Ajuste os detalhes de cada uma abaixo:
+              {variationStocks.length > 1 ? `Este produto possui ${variationStocks.length} variações. ` : 'Ajuste os detalhes da variação abaixo: '}
             </p>
             <div className="grid grid-cols-1 gap-2">
               <div className="grid grid-cols-12 gap-2 px-2 text-[10px] font-bold text-blue-800 uppercase">

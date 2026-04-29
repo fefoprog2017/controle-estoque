@@ -38,6 +38,7 @@ interface Product {
   sellingPrice: number
   averageCost: number
   unitOfMeasure: string
+  categoryId: string
   category: {
     name: string
   }

@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { AlertTriangle, Save, Loader2 } from 'lucide-react'
+import { AlertTriangle, Save, Loader2, Plus, Trash2 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -25,6 +25,18 @@ interface ProductVariation {
   size?: string | null
   currentStock: number
   minStock: number
+  barcode?: string | null
+  unitOfMeasure?: string
+  purchasePrice?: number
+  sellingPrice?: number
+  categoryId?: string
+}
+
+interface NewVariation {
+  sku: string
+  color: string
+  size: string
+  currentStock: number
 }
 
 interface ProductGridModalProps {
@@ -35,6 +47,7 @@ interface ProductGridModalProps {
 
 export function ProductGridModal({ productName, variations: initialVariations, onSuccess }: ProductGridModalProps) {
   const [variations, setVariations] = useState<ProductVariation[]>(initialVariations)
+  const [newVariations, setNewVariations] = useState<NewVariation[]>([])
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
@@ -47,42 +60,99 @@ export function ProductGridModal({ productName, variations: initialVariations, o
     ))
   }
 
+  const handleAddNewRow = () => {
+    setNewVariations(prev => [...prev, { sku: '', color: '', size: '', currentStock: 0 }])
+  }
+
+  const handleNewFieldChange = (index: number, field: keyof NewVariation, value: string | number) => {
+    setNewVariations(prev => prev.map((v, i) => 
+      i === index ? { ...v, [field]: field === 'currentStock' ? Number(value) : value } : v
+    ))
+  }
+
+  const handleRemoveNewRow = (index: number) => {
+    setNewVariations(prev => prev.filter((_, i) => i !== index))
+  }
+
   const handleSave = async () => {
+    if (newVariations.some(v => !v.sku)) {
+      alert('Por favor, preencha o SKU de todas as novas variações.')
+      return
+    }
+
     setIsSaving(true)
     try {
-      await api.put('/products/bulk-update', {
-        products: variations.map(v => ({
-          id: v.id,
-          color: v.color,
-          size: v.size
-        }))
-      })
-      alert('Variações atualizadas com sucesso!')
+      // 1. Atualizar variações existentes
+      if (variations.length > 0) {
+        await api.put('/products/bulk-update', {
+          products: variations.map(v => ({
+            id: v.id,
+            color: v.color,
+            size: v.size
+          }))
+        })
+      }
+
+      // 2. Criar novas variações
+      if (newVariations.length > 0) {
+        // Precisamos de alguns dados base da primeira variação existente para criar as novas
+        const baseProduct = initialVariations[0]
+        
+        for (const nv of newVariations) {
+          await api.post('/products', {
+            name: productName,
+            sku: nv.sku,
+            color: nv.color,
+            size: nv.size,
+            currentStock: nv.currentStock,
+            unitOfMeasure: baseProduct.unitOfMeasure || 'UN',
+            categoryId: baseProduct.categoryId || '00000000-0000-0000-0000-000000000000',
+            purchasePrice: baseProduct.purchasePrice || 0,
+            sellingPrice: baseProduct.sellingPrice || 0,
+            minStock: baseProduct.minStock || 0,
+          })
+        }
+      }
+
+      alert('Variações salvas com sucesso!')
+      setNewVariations([])
       if (onSuccess) {
         onSuccess()
       }
     } catch (error: any) {
       console.error('Erro ao salvar variações:', error)
-      alert('Erro ao salvar variações.')
+      alert(error.response?.data?.message || 'Erro ao salvar variações.')
     } finally {
       setIsSaving(false)
     }
   }
 
   return (
-    <DialogContent className="max-w-4xl">
+    <DialogContent className="max-w-5xl">
       <DialogHeader>
         <div className="flex items-center justify-between pr-8">
           <DialogTitle>Grade de Produto: {productName}</DialogTitle>
-          <Button 
-            size="sm" 
-            className="gap-2" 
-            onClick={handleSave} 
-            disabled={isSaving}
-          >
-            {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-            Salvar Alterações
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline"
+              size="sm" 
+              className="gap-2" 
+              onClick={handleAddNewRow}
+              disabled={isSaving}
+            >
+              <Plus size={16} />
+              Nova Variação
+            </Button>
+            <Button 
+              size="sm" 
+              className="gap-2" 
+              onClick={handleSave} 
+              disabled={isSaving}
+            >
+              {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+              Salvar Tudo
+            </Button>
+          </div>
         </div>
       </DialogHeader>
       
@@ -90,17 +160,18 @@ export function ProductGridModal({ productName, variations: initialVariations, o
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>SKU</TableHead>
+              <TableHead className="w-48">SKU</TableHead>
               <TableHead>Cor</TableHead>
               <TableHead>Tamanho</TableHead>
-              <TableHead className="text-right">Estoque Atual</TableHead>
-              <TableHead className="text-right">Estoque Mín.</TableHead>
+              <TableHead className="text-right w-32">Estoque</TableHead>
+              <TableHead className="w-10"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
+            {/* Variações Existentes */}
             {variations.map((v) => (
               <TableRow key={v.id}>
-                <TableCell className="font-mono text-xs">{v.sku}</TableCell>
+                <TableCell className="font-mono text-xs font-bold">{v.sku}</TableCell>
                 <TableCell>
                   <Input 
                     value={v.color || ''} 
@@ -127,7 +198,55 @@ export function ProductGridModal({ productName, variations: initialVariations, o
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="text-right text-muted-foreground">{v.minStock}</TableCell>
+                <TableCell></TableCell>
+              </TableRow>
+            ))}
+
+            {/* Novas Variações */}
+            {newVariations.map((nv, index) => (
+              <TableRow key={index} className="bg-emerald-50/50">
+                <TableCell>
+                  <Input 
+                    value={nv.sku} 
+                    onChange={(e) => handleNewFieldChange(index, 'sku', e.target.value)}
+                    className="h-8 text-xs border-emerald-200"
+                    placeholder="Novo SKU"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Input 
+                    value={nv.color} 
+                    onChange={(e) => handleNewFieldChange(index, 'color', e.target.value)}
+                    className="h-8 text-xs border-emerald-200"
+                    placeholder="Cor"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Input 
+                    value={nv.size} 
+                    onChange={(e) => handleNewFieldChange(index, 'size', e.target.value)}
+                    className="h-8 text-xs font-bold border-emerald-200"
+                    placeholder="Tam"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Input 
+                    type="number"
+                    value={nv.currentStock} 
+                    onChange={(e) => handleNewFieldChange(index, 'currentStock', e.target.value)}
+                    className="h-8 text-xs text-right border-emerald-200"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 text-destructive"
+                    onClick={() => handleRemoveNewRow(index)}
+                  >
+                    <Trash2 size={14} />
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

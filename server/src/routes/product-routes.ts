@@ -15,6 +15,8 @@ export async function productRoutes(app: FastifyInstance) {
         sku: z.string(),
         barcode: z.string().optional().nullable(),
         unitOfMeasure: z.string(),
+        color: z.string().optional().nullable(),
+        size: z.string().optional().nullable(),
         minStock: z.number().default(0),
         maxStock: z.number().optional().nullable(),
         purchasePrice: z.number().default(0),
@@ -41,6 +43,8 @@ export async function productRoutes(app: FastifyInstance) {
         description: data.description || null,
         barcode: data.barcode || null,
         maxStock: data.maxStock || null,
+        color: data.color || null,
+        size: data.size || null,
       }
     })
 
@@ -180,6 +184,8 @@ export async function productRoutes(app: FastifyInstance) {
         sku: z.string(),
         barcode: z.string().optional().nullable(),
         unitOfMeasure: z.string(),
+        color: z.string().optional().nullable(),
+        size: z.string().optional().nullable(),
         minStock: z.number(),
         maxStock: z.number().optional().nullable(),
         purchasePrice: z.number(),
@@ -230,6 +236,8 @@ export async function productRoutes(app: FastifyInstance) {
           sku: sku,
           barcode: barcode,
           unitOfMeasure: data.unitOfMeasure,
+          color: data.color || null,
+          size: data.size || null,
           minStock: data.minStock,
           purchasePrice: data.purchasePrice,
           sellingPrice: data.sellingPrice,
