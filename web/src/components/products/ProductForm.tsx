@@ -55,7 +55,7 @@ interface ProductFormProps {
 export function ProductForm({ onSuccess, product, allVariations }: ProductFormProps) {
   const [variationStocks, setVariationStocks] = useState<VariationStock[]>([])
 
-  const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } = useForm<ProductFormValues>({
+  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema) as any,
     defaultValues: {
       name: product?.name || '',
