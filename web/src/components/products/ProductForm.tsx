@@ -73,9 +73,7 @@ export function ProductForm({ onSuccess, product, allVariations }: ProductFormPr
     }
   })
 
-  // Sincronizar campos de cor/tamanho do formulário principal se houver apenas uma variação sendo editada na lista
-  const formColor = watch('color')
-  const formSize = watch('size')
+
 
   useEffect(() => {
     if (allVariations && allVariations.length > 0) {
