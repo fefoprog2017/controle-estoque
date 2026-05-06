@@ -47,7 +47,6 @@ interface ProductFormProps {
     minStock: number
     purchasePrice: number
     sellingPrice: number
-    averageCost: number
     description?: string | null
     currentStock: number
   }
@@ -69,7 +68,6 @@ export function ProductForm({ onSuccess, product, allVariations }: ProductFormPr
       minStock: product?.minStock || 0,
       purchasePrice: product?.purchasePrice || 0,
       sellingPrice: product?.sellingPrice || 0,
-      averageCost: product?.averageCost || 0,
       description: product?.description || '',
       currentStock: product?.currentStock || 0,
     }
