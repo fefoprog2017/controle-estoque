@@ -32,11 +32,11 @@ interface Product {
   description?: string | null
   color?: string | null
   size?: string | null
+  brand?: string | null
   currentStock: number
   minStock: number
   purchasePrice: number
   sellingPrice: number
-  averageCost: number
   unitOfMeasure: string
   categoryId: string
   category: {
@@ -48,7 +48,6 @@ interface GroupedProduct {
   name: string
   totalStock: number
   minStock: number
-  avgCost: number
   avgPurchasePrice: number
   sellingPrice: number
   categoryName: string
@@ -111,7 +110,6 @@ export function ProductsPage() {
           name: curr.name,
           totalStock: 0,
           minStock: 0,
-          avgCost: 0,
           avgPurchasePrice: 0,
           sellingPrice: curr.sellingPrice,
           categoryName: curr.category?.name || 'S/Cat',
@@ -121,9 +119,8 @@ export function ProductsPage() {
       }
       acc[key].totalStock += curr.currentStock ?? 0
       acc[key].minStock += curr.minStock ?? 0
-      // Média simples do custo médio e compra entre variações
+      // Média simples do preço de compra entre variações
       const currentVariations = acc[key].variations.length
-      acc[key].avgCost = ((acc[key].avgCost * currentVariations) + (curr.averageCost ?? 0)) / (currentVariations + 1)
       acc[key].avgPurchasePrice = ((acc[key].avgPurchasePrice * currentVariations) + (curr.purchasePrice ?? 0)) / (currentVariations + 1)
       acc[key].variations.push(curr)
       return acc
@@ -179,8 +176,8 @@ export function ProductsPage() {
                 <TableHead>Modelo / Produto</TableHead>
                 <TableHead>Estoque</TableHead>
                 <TableHead>Variações</TableHead>
+                <TableHead>Marca</TableHead>
                 <TableHead className="text-indigo-600">Última Compra</TableHead>
-                <TableHead className="text-amber-600">Custo Médio</TableHead>
                 <TableHead className="text-emerald-600">Preço Venda</TableHead>
                 <TableHead>Margem</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
@@ -197,15 +194,15 @@ export function ProductsPage() {
                 </TableRow>
               ) : (
                 groupedProducts.map((group) => {
-                  // Se o custo médio for 0, usamos o preço de compra para o cálculo inicial
-                  const baseCost = group.avgCost > 0 ? group.avgCost : group.avgPurchasePrice;
+                  // Usa o preço de compra como base para o cálculo da margem
+                  const baseCost = group.avgPurchasePrice;
                   const margin = group.sellingPrice > 0 
                     ? ((group.sellingPrice - baseCost) / group.sellingPrice) * 100 
                     : 0;
 
                   return (
-                    <TableRow 
-                      key={group.name} 
+                    <TableRow
+                      key={group.name}
                       className="cursor-pointer hover:bg-muted/50 transition-colors"
                       onClick={() => {
                         setSelectedGroup(group)
@@ -232,11 +229,13 @@ export function ProductsPage() {
                           {group.variations.length}
                         </div>
                       </TableCell>
+                      <TableCell>
+                        <span className="text-sm font-medium">
+                          {group.variations[0].brand || '—'}
+                        </span>
+                      </TableCell>
                       <TableCell className="text-indigo-600 font-medium">
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(group.avgPurchasePrice || 0)}
-                      </TableCell>
-                      <TableCell className="text-amber-600 font-medium">
-                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(group.avgCost || 0)}
                       </TableCell>
                       <TableCell className="text-emerald-600 font-bold">
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(group.sellingPrice || 0)}
@@ -244,7 +243,7 @@ export function ProductsPage() {
                       <TableCell>
                         <span className={cn(
                           "text-xs font-bold px-2 py-1 rounded",
-                          margin > 30 ? "bg-emerald-100 text-emerald-700" : 
+                          margin > 30 ? "bg-emerald-100 text-emerald-700" :
                           margin > 0 ? "bg-amber-100 text-amber-700" : "bg-rose-100 text-rose-700"
                         )}>
                           {margin.toFixed(1)}%

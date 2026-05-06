@@ -69,6 +69,7 @@ model Product {
   
   color           String?
   size            String?
+  brand           String?
 
   minStock        Float    @default(0)
   maxStock        Float?

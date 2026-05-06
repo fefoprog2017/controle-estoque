@@ -21,7 +21,8 @@ export async function productRoutes(app: FastifyInstance) {
         maxStock: z.number().optional().nullable(),
         purchasePrice: z.number().default(0),
         sellingPrice: z.number().default(0),
-        averageCost: z.number().default(0), 
+        averageCost: z.number().default(0),
+        brand: z.string().optional().nullable(),
         categoryId: z.string().uuid(),
         currentStock: z.number().default(0),
       })
@@ -144,6 +145,7 @@ export async function productRoutes(app: FastifyInstance) {
             name: item.nome,
             color: item.cor || null,
             size: item.tam || null,
+            brand: null,
             currentStock: item.qtd,
             purchasePrice: purchasePrice,
             averageCost: purchasePrice,
@@ -191,6 +193,7 @@ export async function productRoutes(app: FastifyInstance) {
         purchasePrice: z.number(),
         sellingPrice: z.number(),
         averageCost: z.number().optional(),
+        brand: z.string().optional().nullable(),
         currentStock: z.number().optional(),
       })
     }
@@ -238,6 +241,7 @@ export async function productRoutes(app: FastifyInstance) {
           unitOfMeasure: data.unitOfMeasure,
           color: data.color || null,
           size: data.size || null,
+          brand: data.brand || null,
           minStock: data.minStock,
           purchasePrice: data.purchasePrice,
           sellingPrice: data.sellingPrice,

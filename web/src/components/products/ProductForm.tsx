@@ -14,10 +14,10 @@ const productSchema = z.object({
   unitOfMeasure: z.string().min(1, 'Unidade é obrigatória'),
   color: z.string().optional().nullable(),
   size: z.string().optional().nullable(),
+  brand: z.string().optional().nullable(),
   minStock: z.coerce.number().min(0),
   purchasePrice: z.coerce.number().min(0),
   sellingPrice: z.coerce.number().min(0),
-  averageCost: z.coerce.number().min(0),
   description: z.string().optional(),
   currentStock: z.coerce.number().default(0),
 })
@@ -43,6 +43,7 @@ interface ProductFormProps {
     unitOfMeasure: string
     color?: string | null
     size?: string | null
+    brand?: string | null
     minStock: number
     purchasePrice: number
     sellingPrice: number
@@ -64,6 +65,7 @@ export function ProductForm({ onSuccess, product, allVariations }: ProductFormPr
       unitOfMeasure: product?.unitOfMeasure || 'UN',
       color: product?.color || '',
       size: product?.size || '',
+      brand: product?.brand || '',
       minStock: product?.minStock || 0,
       purchasePrice: product?.purchasePrice || 0,
       sellingPrice: product?.sellingPrice || 0,
@@ -210,6 +212,11 @@ export function ProductForm({ onSuccess, product, allVariations }: ProductFormPr
         </div>
       )}
 
+      <div className="space-y-2">
+        <Label htmlFor="brand">Marca</Label>
+        <Input id="brand" {...register('brand')} placeholder="Ex: Adidas, Nike, Hering..." />
+      </div>
+
       <div className="grid grid-cols-2 gap-4 border p-4 rounded-lg bg-muted/30">
         <div className="space-y-2">
           <Label htmlFor="purchasePrice" className="text-indigo-700 font-bold">Preço de Compra (R$)</Label>
@@ -221,15 +228,9 @@ export function ProductForm({ onSuccess, product, allVariations }: ProductFormPr
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="averageCost">Custo Médio (R$)</Label>
-          <Input id="averageCost" type="number" step="0.01" {...register('averageCost')} readOnly className="bg-muted" />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="minStock">Estoque Mínimo (Alerta)</Label>
-          <Input id="minStock" type="number" {...register('minStock')} />
-        </div>
+      <div className="space-y-2">
+        <Label htmlFor="minStock">Estoque Mínimo (Alerta)</Label>
+        <Input id="minStock" type="number" {...register('minStock')} />
       </div>
 
       <div className="border p-4 rounded-lg bg-blue-50/30 border-blue-100">
