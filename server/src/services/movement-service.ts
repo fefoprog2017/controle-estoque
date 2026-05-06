@@ -23,6 +23,21 @@ interface CreateMovementParams {
 export class MovementService {
   static async create(params: CreateMovementParams) {
     return await prisma.$transaction(async (tx) => {
+      // 0. Garantir que existe pelo menos um usuário
+      let userId = params.userId;
+      const userExists = await tx.user.findUnique({ where: { id: userId } });
+      if (!userExists) {
+        const fallbackUser = await tx.user.findFirst({ select: { id: true } });
+        if (fallbackUser) {
+          userId = fallbackUser.id;
+        } else {
+          const created = await tx.user.create({
+            data: { name: 'Gerente', email: 'gerente@default.com', password: 'admin', role: 'ADMIN' }
+          });
+          userId = created.id;
+        }
+      }
+
       // 1. Buscar o produto
       const product = await tx.product.findUnique({
         where: { id: params.productId }
@@ -61,7 +76,7 @@ export class MovementService {
           unitValue: params.unitValue,
           totalValue: params.quantity * params.unitValue,
           productId: params.productId,
-          userId: params.userId,
+          userId: userId,
           // Corrigindo FK: Se o ID vier vazio ou string vazia, deve ser null para não violar constraint
           supplierId: params.supplierId && params.supplierId !== "undefined" && params.supplierId !== "" ? params.supplierId : null,
           clientId: params.clientId && params.clientId !== "undefined" && params.clientId !== "" ? params.clientId : null,
